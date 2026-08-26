@@ -1,10 +1,5 @@
 from sqlalchemy.orm import Session
-from app.Repository import (
-    create_person_repo,
-    get_person_repo,
-    edit_person_repo,
-    delete_person_repo,
-)
+from app.Repository.Product_Repo import get_products_repo
 from app.schemas import PersonCreate
 from fastapi import HTTPException
 import logging
@@ -34,13 +29,13 @@ def add_product_service(db: Session, create: PersonCreate):
         raise
 
 
-def list_person_services(db: Session):
+def list_product_services(db: Session):
     logger.info("Fetching all persons")
 
     try:
-        persons = get_person_repo(db)
-        logger.info("Retrieved %d person(s)", len(persons))
-        return persons
+        products = get_products_repo(db)
+        logger.info("Retrieved %d person(s)", len(products))
+        return products
 
     except Exception:
         logger.exception("Failed to retrieve persons")
