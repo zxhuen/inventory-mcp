@@ -1,9 +1,14 @@
 from sqlalchemy.orm import Session
-from app.Repository.Product_Repo import get_products_repo
+from app.Repository.Product_Repo import (
+    get_products_repo,
+    edit_product_repo,
+    delete_product_repo,
+)
 from app.schemas import PersonCreate
 from fastapi import HTTPException
 import logging
 from app.models.Products import Product
+from app.schemas.Products import ProductCreate
 
 logger = logging.getLogger(__name__)
 
@@ -42,26 +47,22 @@ def list_product_services(db: Session):
         raise
 
 
-def edit_person_services(db: Session, person_id: int, edit_person: PersonCreate):
-    logger.info("Updating person with ID=%s", person_id)
-
+def edit_person_services(db: Session, person_id: int, edit_product: ProductCreate):
     try:
-        person = edit_person_repo(db, person_id, edit_person)
+        product = edit_product_repo(db, person_id)
 
-        if person is None:
-            logger.warning("Person with ID=%s not found", person_id)
-            raise HTTPException(status_code=404, detail="no person found")
+        if product is None:
+            raise HTTPException(status_code=404, detail="no product found")
 
-        person.last_name = edit_person.last_name
-        person.first_name = edit_person.first_name
-        person.middle_name = edit_person.middle_name
-        person.age = edit_person.age
+        product.name = edit_product.name
+        product.description = edit_product.description
+        product.price = edit_product.price
+        product.stock = edit_product.stock
 
         db.commit()
-        db.refresh(person)
+        db.refresh(product)
 
-        logger.info("Successfully updated person with ID=%s", person_id)
-        return person
+        return product
 
     except HTTPException:
         raise
