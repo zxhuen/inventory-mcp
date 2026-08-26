@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def add_person_services(db: Session, create: PersonCreate):
+def add_product_service(db: Session, create: PersonCreate):
     logger.info("Creating person: %s %s", create.first_name, create.last_name)
 
     try:
