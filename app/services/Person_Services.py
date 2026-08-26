@@ -1,23 +1,33 @@
 from sqlalchemy.orm import Session
-from app.repository import create_person_repo, get_person_repo, edit_person_repo, delete_person_repo
+from app.Repository import (
+    create_person_repo,
+    get_person_repo,
+    edit_person_repo,
+    delete_person_repo,
+)
 from app.schemas import PersonCreate
 from fastapi import HTTPException
-import logging  
+import logging
+from app.schemas.Products import ProductCreate
+from app.models.Products import Product
 
 logger = logging.getLogger(__name__)
 
-def add_person_services(db: Session, create: PersonCreate):
-    logger.info("Creating person: %s %s", create.first_name, create.last_name)
 
+def add_person_services(db: Session, create: ProductCreate):
     try:
-        person = create_person_repo(db, create)
+        product = Product(
+            name=create.name,
+            description=create.description,
+            price=create.price,
+            stock=create.stock,
+        )
 
-        db.add(person)
+        db.add(product)
         db.commit()
-        db.refresh(person)
+        db.refresh(product)
 
-        logger.info("Successfully created person with ID=%s", person.id)
-        return person
+        return product
 
     except Exception:
         logger.exception("Failed to create person")
@@ -46,10 +56,7 @@ def edit_person_services(db: Session, person_id: int, edit_person: PersonCreate)
 
         if person is None:
             logger.warning("Person with ID=%s not found", person_id)
-            raise HTTPException(
-                status_code=404,
-                detail="no person found"
-            )
+            raise HTTPException(status_code=404, detail="no person found")
 
         person.last_name = edit_person.last_name
         person.first_name = edit_person.first_name
@@ -78,10 +85,7 @@ def delete_person_services(db: Session, person_id: int):
 
         if person is None:
             logger.warning("Person with ID=%s not found", person_id)
-            raise HTTPException(
-                status_code=404,
-                detail="no person found"
-            )
+            raise HTTPException(status_code=404, detail="no person found")
 
         db.delete(person)
         db.commit()
