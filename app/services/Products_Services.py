@@ -8,22 +8,25 @@ from app.Repository import (
 from app.schemas import PersonCreate
 from fastapi import HTTPException
 import logging
+from app.models.Products import Product
 
 logger = logging.getLogger(__name__)
 
 
 def add_product_service(db: Session, create: PersonCreate):
-    logger.info("Creating person: %s %s", create.first_name, create.last_name)
-
     try:
-        person = create_person_repo(db, create)
+        product = Product(
+            name=create.name,
+            description=create.description,
+            price=create.price,
+            stock=create.stock,
+        )
 
-        db.add(person)
+        db.add(product)
         db.commit()
-        db.refresh(person)
+        db.refresh(product)
 
-        logger.info("Successfully created person with ID=%s", person.id)
-        return person
+        return product
 
     except Exception:
         logger.exception("Failed to create person")
