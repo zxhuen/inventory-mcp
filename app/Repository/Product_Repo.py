@@ -16,7 +16,7 @@ def edit_product_repo(db: Session, product_id: UUID):
     return product_from_db
 
 
-def delete_product_repo(db: Session, person_id: int):
-    person = db.query(Person).filter(Person.id == person_id).first()
+def delete_product_repo(db: Session, product_id: UUID):
+    person = db.query(Product).filter(Product.id == product_id).first()
 
     return person

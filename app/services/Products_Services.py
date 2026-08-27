@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 from app.Repository.Product_Repo import (
     get_products_repo,
@@ -72,25 +74,21 @@ def edit_person_services(db: Session, person_id: int, edit_product: ProductCreat
         raise
 
 
-def delete_person_services(db: Session, person_id: int):
-    logger.info("Deleting person with ID=%s", person_id)
+def delete_product_services(db: Session, product_id: UUID):
 
     try:
-        person = delete_person_repo(db, person_id)
+        product = delete_product_repo(db, product_id)
 
-        if person is None:
-            logger.warning("Person with ID=%s not found", person_id)
+        if product is None:
             raise HTTPException(status_code=404, detail="no person found")
 
-        db.delete(person)
+        db.delete(product)
         db.commit()
 
-        logger.info("Successfully deleted person with ID=%s", person_id)
-        return person
+        return product
 
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to delete person with ID=%s", person_id)
         db.rollback()
         raise
