@@ -43,7 +43,7 @@ def edit_person(
 
 @router.delete("/delete-product")
 @limiter.limit("10/minute")
-def delete_person(request: Request, product_id: int, db: Session = Depends(get_db)):
-    person = delete_product_services(db, product_id)
+def delete_product(request: Request, product_id: int, db: Session = Depends(get_db)):
+    product = delete_product_services(db, product_id)
 
-    return person
+    return product
