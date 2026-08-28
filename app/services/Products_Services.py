@@ -80,7 +80,7 @@ def delete_product_services(db: Session, product_id: UUID):
         product = delete_product_repo(db, product_id)
 
         if product is None:
-            raise HTTPException(status_code=404, detail="no person found")
+            raise HTTPException(status_code=404, detail="no product found")
 
         db.delete(product)
         db.commit()
