@@ -15,7 +15,7 @@ from app.schemas.Products import ProductCreate
 logger = logging.getLogger(__name__)
 
 
-def add_product_service(db: Session, create: PersonCreate):
+def add_product_service(db: Session, create: ProductCreate):
     try:
         product = Product(
             name=create.name,
@@ -49,7 +49,7 @@ def list_product_services(db: Session):
         raise
 
 
-def edit_person_services(db: Session, person_id: int, edit_product: ProductCreate):
+def edit_product_services(db: Session, person_id: int, edit_product: ProductCreate):
     try:
         product = edit_product_repo(db, person_id)
 
