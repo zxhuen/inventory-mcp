@@ -51,17 +51,17 @@ def list_product_services(db: Session):
 
 def edit_product_services(db: Session, person_id: int, edit_product: ProductCreate):
     try:
-        product = edit_product_repo(db, person_id)
+        with db.begin():
+            product = edit_product_repo(db, person_id)
 
-        if product is None:
-            raise HTTPException(status_code=404, detail="no product found")
+            if product is None:
+                raise HTTPException(status_code=404, detail="no product found")
 
-        product.name = edit_product.name
-        product.description = edit_product.description
-        product.price = edit_product.price
-        product.stock = edit_product.stock
+            product.name = edit_product.name
+            product.description = edit_product.description
+            product.price = edit_product.price
+            product.stock = edit_product.stock
 
-        db.commit()
         db.refresh(product)
 
         return product
@@ -69,7 +69,6 @@ def edit_product_services(db: Session, person_id: int, edit_product: ProductCrea
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to update person with ID=%s", person_id)
         db.rollback()
         raise
 
