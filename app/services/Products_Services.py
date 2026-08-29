@@ -5,6 +5,7 @@ from app.Repository.Product_Repo import (
     get_products_repo,
     edit_product_repo,
     delete_product_repo,
+    search_product_name_repo,
 )
 from app.schemas import PersonCreate
 from fastapi import HTTPException
@@ -95,7 +96,7 @@ def delete_product_services(db: Session, product_id: UUID):
 
 def search_product_name(db: Session, name: str):
     try:
-        products = get_products_repo(db)
+        products = search_product_name_repo(db, name)
         if products is None:
             raise HTTPException(status_code=401, detail="no product found")
         return products

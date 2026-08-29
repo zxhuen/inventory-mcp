@@ -9,6 +9,7 @@ from app.services.Products_Services import (
     list_product_services,
     edit_product_services,
     delete_product_services,
+    search_product_name,
 )
 from app.schemas.Products import ProductCreate
 from app.core.limiter import limiter
@@ -47,3 +48,9 @@ def delete_product(request: Request, product_id: UUID, db: Session = Depends(get
     product = delete_product_services(db, product_id)
 
     return product
+
+
+@router.get("/search-product")
+@limiter.limit("10/minute")
+def get_person(request: Request, name: str, db: Session = Depends(get_db)):
+    return search_product_name(db, name)
