@@ -22,3 +22,7 @@ def delete_product_repo(db: Session, product_id: UUID):
     person = db.query(Product).filter(Product.id == product_id).first()
 
     return person
+
+
+def search_product_name_repo(db: Session, name: str):
+    return db.query(Product).filter(Product.name == name).first()

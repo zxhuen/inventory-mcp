@@ -49,10 +49,10 @@ def list_product_services(db: Session):
         raise
 
 
-def edit_product_services(db: Session, person_id: int, edit_product: ProductCreate):
+def edit_product_services(db: Session, product_id: UUID, edit_product: ProductCreate):
     try:
         with db.begin():
-            product = edit_product_repo(db, person_id)
+            product = edit_product_repo(db, product_id)
 
             if product is None:
                 raise HTTPException(status_code=404, detail="no product found")
@@ -90,4 +90,15 @@ def delete_product_services(db: Session, product_id: UUID):
         raise
     except Exception:
         db.rollback()
+        raise
+
+
+def search_product_name(db: Session, name: str):
+    try:
+        products = get_products_repo(db)
+        if products is None:
+            raise HTTPException(status_code=401, detail="no product found")
+        return products
+
+    except Exception:
         raise
