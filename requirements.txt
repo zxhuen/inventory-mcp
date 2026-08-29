@@ -16,3 +16,6 @@ pytest
 
 slowapi
 rich
+
+mcp
+google-genai
