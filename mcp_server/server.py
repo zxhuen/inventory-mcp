@@ -6,7 +6,7 @@ mcp = FastMCP("Inventory MCP")
 
 @mcp.tool()
 def hello():
-    return "Hello from Inventory MCP"
+    return "Hello MCP"
 
 
 register_product_tools(mcp)
