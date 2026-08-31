@@ -1,3 +1,5 @@
+from asyncio import transports
+
 from mcp.server.fastmcp import FastMCP
 from mcp_server.tools.product_tools import register_product_tools
 
@@ -12,4 +14,4 @@ def hello():
 register_product_tools(mcp)
 
 if __name__ == "__main__":
-    mcp.run()
+    mcp.run(transport="stdio")
