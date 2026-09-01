@@ -1,5 +1,5 @@
 import asyncio
-
+import sys
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from app.ai.providers.gemini import client
@@ -10,8 +10,11 @@ from fastapi import Depends
 from app.core.database import get_db
 
 server_params = StdioServerParameters(
-    command="python",
-    args=["server.py"],
+    command=sys.executable,
+    args=["-m", "app.mcp_server.server"],
+    cwd=str(
+        Path(__file__).resolve().parents[2]
+    ),  # adjust so this points at your project root (the dir containing the `app` package)
 )
 
 ALLOWED_INVENTORY_TOOLS = [
