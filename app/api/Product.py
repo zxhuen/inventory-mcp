@@ -3,7 +3,6 @@ from uuid import UUID
 from fastapi import APIRouter, Request, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.schemas import PersonCreate, PersonResponse
 from app.services.Products_Services import (
     add_product_service,
     list_product_services,
@@ -19,19 +18,21 @@ router = APIRouter(prefix="/Product", tags=["Product"])
 
 @router.post("/add-product")
 @limiter.limit("10/minute")
-def add_product(request: Request, person: ProductCreate, db: Session = Depends(get_db)):
-    return add_product_service(db, person)
+def add_product(
+    request: Request, Product: ProductCreate, db: Session = Depends(get_db)
+):
+    return add_product_service(db, Product)
 
 
 @router.get("/list-product")
 @limiter.limit("10/minute")
-def get_person(request: Request, db: Session = Depends(get_db)):
+def list_product(request: Request, db: Session = Depends(get_db)):
     return list_product_services(db)
 
 
 @router.put("/edit-product")
 @limiter.limit("10/minute")
-def edit_person(
+def edit_product(
     request: Request,
     product_id: UUID,
     product: ProductCreate,
@@ -52,5 +53,5 @@ def delete_product(request: Request, product_id: UUID, db: Session = Depends(get
 
 @router.get("/search-product")
 @limiter.limit("10/minute")
-def get_person(request: Request, name: str, db: Session = Depends(get_db)):
+def get_product(request: Request, name: str, db: Session = Depends(get_db)):
     return search_product_name(db, name)

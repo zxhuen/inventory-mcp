@@ -14,9 +14,26 @@ server_params = StdioServerParameters(
     args=["server.py"],
 )
 
-SYSTEM_PROMPT = Path(
-    "inventory-mcp/app/mcp_server/prompts/inventory_assistant.md"
-).read_text(encoding="utf-8")
+ALLOWED_INVENTORY_TOOLS = [
+    "add_product",
+    "list_products",
+    "edit_product",
+    "delete_product",
+    "lookup_product_by_name",
+]
+
+SYSTEM_PROMPT = Path("app/mcp_server/prompts/inventory_assistant.md").read_text(
+    encoding="utf-8"
+)
+
+
+def build_tool_config():
+    return types.ToolConfig(
+        function_calling_config=types.FunctionCallingConfig(
+            mode=types.FunctionCallingConfigMode.AUTO,
+            allowed_function_names=ALLOWED_INVENTORY_TOOLS,
+        )
+    )
 
 
 async def chat(prompt: str, db: Session = Depends(get_db)):
@@ -33,6 +50,7 @@ async def chat(prompt: str, db: Session = Depends(get_db)):
                 config=types.GenerateContentConfig(
                     tools=[session],
                     system_instruction=SYSTEM_PROMPT,
+                    tool_config=build_tool_config(),
                 ),
             )
 

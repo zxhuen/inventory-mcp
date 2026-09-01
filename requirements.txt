@@ -20,4 +20,4 @@ rich
 mcp
 google-genai
 
-"mcp[cli]"
+"mcp<2"

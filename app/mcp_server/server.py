@@ -1,7 +1,7 @@
 from asyncio import transports
 
 from mcp.server.fastmcp import FastMCP
-from mcp_server.tools.product_tools import register_product_tools
+from app.mcp_server.tools.product_tools import register_product_tools
 
 mcp = FastMCP("Inventory MCP")
 

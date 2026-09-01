@@ -157,12 +157,20 @@ def register_product_tools(mcp: FastMCP):
             db.close()
 
     @mcp.tool()
-    def search_products(name: str):
+    def lookup_product_by_name(name: str):
         """
-        Search for products by name.
+        STRICTLY FOR name-based product lookup only.
+
+        Use this tool only when the user explicitly asks to find a product by
+        name, partial name, or search for a specific matching product.
+
+        IMPORTANT: Do NOT use this tool when the user asks to add, create,
+        update, delete, or list products. If the request includes add/update/
+        delete intent, do not call this tool even if the message includes a
+        product name.
 
         Args:
-            name: Name or partial name of the product.
+            name: The exact or partial product name to look up.
         """
 
         db = SessionLocal()

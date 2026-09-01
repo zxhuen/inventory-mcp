@@ -7,7 +7,6 @@ from app.Repository.Product_Repo import (
     delete_product_repo,
     search_product_name_repo,
 )
-from app.schemas import PersonCreate
 from fastapi import HTTPException
 import logging
 from app.models.Products import Product
@@ -32,21 +31,21 @@ def add_product_service(db: Session, create: ProductCreate):
         return product
 
     except Exception:
-        logger.exception("Failed to create person")
+        logger.exception("Failed to create product")
         db.rollback()
         raise
 
 
 def list_product_services(db: Session):
-    logger.info("Fetching all persons")
+    logger.info("Fetching all products")
 
     try:
         products = get_products_repo(db)
-        logger.info("Retrieved %d person(s)", len(products))
+        logger.info("Retrieved %d product(s)", len(products))
         return products
 
     except Exception:
-        logger.exception("Failed to retrieve persons")
+        logger.exception("Failed to retrieve products")
         raise
 
 
@@ -98,7 +97,7 @@ def search_product_name(db: Session, name: str):
     try:
         products = search_product_name_repo(db, name)
         if products is None:
-            raise HTTPException(status_code=401, detail="no product found")
+            raise HTTPException(status_code=404, detail="no product found")
         return products
 
     except Exception:

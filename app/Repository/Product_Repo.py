@@ -1,9 +1,7 @@
 from uuid import UUID
 
 from sqlalchemy.orm import Session
-from app.models.Person import Person
 from app.models.Products import Product
-from app.schemas.Person import PersonCreate, PersonResponse
 from app.schemas.Products import ProductCreate
 
 
@@ -19,9 +17,9 @@ def edit_product_repo(db: Session, product_id: UUID):
 
 
 def delete_product_repo(db: Session, product_id: UUID):
-    person = db.query(Product).filter(Product.id == product_id).first()
+    product = db.query(Product).filter(Product.id == product_id).first()
 
-    return person
+    return product
 
 
 def search_product_name_repo(db: Session, name: str):
