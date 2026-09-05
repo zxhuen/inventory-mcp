@@ -94,8 +94,10 @@ async def chat(
                 )
             ]
 
+            MAX_TOOL_ROUNDS = 5
+
             # 5. Gemini <-> MCP tool-calling loop
-            while True:
+            for _ in range(MAX_TOOL_ROUNDS):
 
                 response = await client.aio.models.generate_content(
                     model="gemini-2.5-flash",
