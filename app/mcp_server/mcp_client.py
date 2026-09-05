@@ -2,19 +2,22 @@ import sys
 from pathlib import Path
 
 from fastapi import Depends
-from sqlalchemy.orm import Session
-
 from google.genai import types
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from pytest import Session
 
 from app.ai.providers.gemini import client
 from app.core.database import get_db
 
-server_params = StdioServerParameters(
-    command=sys.executable,
-    args=["-m", "app.mcp_server.server"],
-    cwd=str(Path(__file__).resolve().parents[2]),
+# --------------------------------------------------
+# Configuration
+# --------------------------------------------------
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+SYSTEM_PROMPT = (BASE_DIR / "app/mcp_server/prompts/inventory_assistant.md").read_text(
+    encoding="utf-8"
 )
 
 
@@ -27,28 +30,38 @@ ALLOWED_INVENTORY_TOOLS = [
 ]
 
 
-SYSTEM_PROMPT = Path("app/mcp_server/prompts/inventory_assistant.md").read_text(
-    encoding="utf-8"
+server_params = StdioServerParameters(
+    command=sys.executable,
+    args=["-m", "app.mcp_server.server"],
+    cwd=str(BASE_DIR),
 )
 
 
-def build_tool_config():
+MAX_TOOL_ROUNDS = 5
+
+
+# --------------------------------------------------
+# Gemini configuration
+# --------------------------------------------------
+
+
+def build_tool_config() -> types.ToolConfig:
     return types.ToolConfig(
         function_calling_config=types.FunctionCallingConfig(
-            mode=types.FunctionCallingConfigMode.ANY,
+            mode=types.FunctionCallingConfigMode.AUTO,
             allowed_function_names=ALLOWED_INVENTORY_TOOLS,
         )
     )
 
 
-def convert_mcp_tools_to_gemini(mcp_tools):
-    function_declarations = []
+def convert_mcp_tools_to_gemini(mcp_tools) -> list[types.Tool]:
+    declarations = []
 
     for tool in mcp_tools:
         if tool.name not in ALLOWED_INVENTORY_TOOLS:
             continue
 
-        function_declarations.append(
+        declarations.append(
             types.FunctionDeclaration(
                 name=tool.name,
                 description=tool.description or "",
@@ -56,37 +69,128 @@ def convert_mcp_tools_to_gemini(mcp_tools):
             )
         )
 
-    return [types.Tool(function_declarations=function_declarations)]
+    return [types.Tool(function_declarations=declarations)]
 
 
-def mcp_result_to_text(result):
-    parts = []
+# --------------------------------------------------
+# MCP result handling
+# --------------------------------------------------
+
+
+def mcp_result_to_text(result) -> str:
+    """
+    Convert MCP tool result content into plain text.
+    """
+
+    text_parts = []
 
     for content in result.content:
-        if hasattr(content, "text"):
-            parts.append(content.text)
+        text = getattr(content, "text", None)
 
-    return "\n".join(parts)
+        if text:
+            text_parts.append(text)
+
+    return "\n".join(text_parts)
 
 
-async def chat(
-    prompt: str,
-    db: Session = Depends(get_db),
-):
+# --------------------------------------------------
+# Gemini response handling
+# --------------------------------------------------
+
+
+def get_function_calls(response):
+    """
+    Safely get Gemini function calls.
+    """
+
+    return response.function_calls or []
+
+
+# --------------------------------------------------
+# Tool execution
+# --------------------------------------------------
+
+
+async def execute_tool(
+    session: ClientSession,
+    tool_name: str,
+    tool_args: dict,
+) -> dict:
+    """
+    Execute one MCP tool and convert its result
+    into a format Gemini can understand.
+    """
+
+    if tool_name not in ALLOWED_INVENTORY_TOOLS:
+        return {"error": f"Tool '{tool_name}' is not allowed."}
+
+    try:
+        result = await session.call_tool(
+            tool_name,
+            arguments=tool_args,
+        )
+
+        result_text = mcp_result_to_text(result)
+
+        print(f"[MCP] Tool: {tool_name}")
+        print(f"[MCP] Args: {tool_args}")
+        print(f"[MCP] Result: {result_text}")
+
+        return {"result": result_text}
+
+    except Exception as exc:
+        print(f"[MCP] Tool '{tool_name}' failed: {exc}")
+
+        return {"error": str(exc)}
+
+
+# --------------------------------------------------
+# Send tool result back to Gemini
+# --------------------------------------------------
+
+
+def append_tool_result(
+    contents: list,
+    tool_name: str,
+    tool_result: dict,
+) -> None:
+
+    contents.append(
+        types.Content(
+            role="tool",
+            parts=[
+                types.Part.from_function_response(
+                    name=tool_name,
+                    response=tool_result,
+                )
+            ],
+        )
+    )
+
+
+# --------------------------------------------------
+# Main chat function
+# --------------------------------------------------
+
+
+async def chat(prompt: str, db: Session = Depends(get_db)) -> str:
+
     async with stdio_client(server_params) as (read, write):
 
         async with ClientSession(read, write) as session:
 
-            # 1. Initialize MCP connection
+            # 1. Initialize MCP
             await session.initialize()
 
-            # 2. Get tools from the MCP server
-            mcp_result = await session.list_tools()
+            # 2. Get available MCP tools
+            mcp_response = await session.list_tools()
 
-            # 3. Convert MCP tools into Gemini tools
-            gemini_tools = convert_mcp_tools_to_gemini(mcp_result.tools)
+            # 3. Convert MCP tools → Gemini tools
+            gemini_tools = convert_mcp_tools_to_gemini(mcp_response.tools)
 
-            # 4. Start the conversation
+            print("[MCP] Available tools:", [tool.name for tool in mcp_response.tools])
+
+            # 4. Initial user message
             contents = [
                 types.Content(
                     role="user",
@@ -94,10 +198,10 @@ async def chat(
                 )
             ]
 
-            MAX_TOOL_ROUNDS = 5
+            # 5. Gemini ↔ MCP loop
+            for round_number in range(1, MAX_TOOL_ROUNDS + 1):
 
-            # 5. Gemini <-> MCP tool-calling loop
-            for _ in range(MAX_TOOL_ROUNDS):
+                print(f"[Gemini] Tool round {round_number}")
 
                 response = await client.aio.models.generate_content(
                     model="gemini-2.5-flash",
@@ -109,45 +213,58 @@ async def chat(
                     ),
                 )
 
-                # If Gemini has no tool call, we're done
-                if not response.function_calls:
-                    return response.text
+                function_calls = get_function_calls(response)
 
-                # Add Gemini's response to the conversation
-                contents.append(response.candidates[0].content)
+                # ------------------------------------------
+                # Gemini produced a normal text response
+                # ------------------------------------------
 
-                # Execute every requested tool
-                for function_call in response.function_calls:
+                if not function_calls:
+
+                    text = response.text
+
+                    if text:
+                        return text
+
+                    return "Gemini returned an empty response."
+
+                # ------------------------------------------
+                # Gemini requested tools
+                # ------------------------------------------
+
+                if not response.candidates:
+                    return "Gemini returned no candidates."
+
+                assistant_content = response.candidates[0].content
+
+                contents.append(assistant_content)
+
+                # ------------------------------------------
+                # Execute requested tools
+                # ------------------------------------------
+
+                for function_call in function_calls:
 
                     tool_name = function_call.name
                     tool_args = function_call.args or {}
 
-                    # Safety check
-                    if tool_name not in ALLOWED_INVENTORY_TOOLS:
-                        tool_result = {"error": f"Tool '{tool_name}' is not allowed."}
-
-                    else:
-                        try:
-                            # Call the actual MCP tool
-                            result = await session.call_tool(
-                                tool_name,
-                                arguments=tool_args,
-                            )
-
-                            tool_result = {"result": mcp_result_to_text(result)}
-
-                        except Exception as e:
-                            tool_result = {"error": str(e)}
-
-                    # Send MCP result back to Gemini
-                    contents.append(
-                        types.Content(
-                            role="tool",
-                            parts=[
-                                types.Part.from_function_response(
-                                    name=tool_name,
-                                    response=tool_result,
-                                )
-                            ],
-                        )
+                    tool_result = await execute_tool(
+                        session=session,
+                        tool_name=tool_name,
+                        tool_args=tool_args,
                     )
+
+                    append_tool_result(
+                        contents=contents,
+                        tool_name=tool_name,
+                        tool_result=tool_result,
+                    )
+
+            # ------------------------------------------
+            # Prevent silent None
+            # ------------------------------------------
+
+            return (
+                "I couldn't complete the requested operation "
+                f"within {MAX_TOOL_ROUNDS} tool rounds."
+            )
